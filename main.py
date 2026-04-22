@@ -61,6 +61,9 @@ def _clean() -> int:
             pr(f"Removed '{directory}'")
         else:
             pr(f"'{directory}' already clean")
+    if (build_md := Path("build.md")).exists():
+        build_md.unlink()
+        pr("Removed 'build.md'")
     return 0
 
 def main() -> None:
