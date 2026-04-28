@@ -2,7 +2,7 @@ import json
 from pathlib import Path
 
 from src.core.network import NetworkManager
-from src.scrapers.base import BaseScraper, DownloadResult, parse_html
+from src.scrapers.base import AppMetadata, BaseScraper, DownloadResult, parse_html
 
 
 class UptodownError(Exception):
@@ -14,44 +14,43 @@ class UptodownScraper(BaseScraper):
         self._resp_html: str = ""
         self._resp_pkg_html: str = ""
 
-    def fetch_metadata(self, url: str) -> None:
+    def fetch_metadata(self, url: str) -> AppMetadata:
         self._resp_html = self.net.get(f"{url}/versions")
         self._resp_pkg_html = self.net.get(f"{url}/download")
 
-    def get_pkg_name(self) -> str:
-        soup = parse_html(self._resp_pkg_html)
-        if td := soup.select_one("tr.full:nth-child(1) > td:nth-child(3)"):
-            return td.get_text(strip=True)
-        raise UptodownError("Uptodown: package name not found")
+        soup_pkg = parse_html(self._resp_pkg_html)
+        if td := soup_pkg.select_one("tr.full:nth-child(1) > td:nth-child(3)"):
+            pkg_name = td.get_text(strip=True)
+        else:
+            raise UptodownError("Uptodown: package name not found")
 
-    def get_versions(self, allow_beta: bool = False) -> list[str]:
-        soup = parse_html(self._resp_html)
-        return [el.get_text(strip=True) for el in soup.select(".version") if el.get_text(strip=True)]
+        soup_ver = parse_html(self._resp_html)
+        versions = [el.get_text(strip=True) for el in soup_ver.select(".version") if el.get_text(strip=True)]
+        return AppMetadata(pkg_name=pkg_name, versions=versions)
 
     def download(self, url: str, version: str, dest: Path, arch: str, dpi: str) -> DownloadResult:
         if arch == "arm-v7a":
             arch = "armeabi-v7a"
-        apparch = ["arm64-v8a, armeabi-v7a, x86_64", "arm64-v8a, armeabi-v7a, x86, x86_64", "arm64-v8a, armeabi-v7a"] + ([arch] if arch != "all" else [])
 
+        apparch = ["arm64-v8a, armeabi-v7a, x86_64", "arm64-v8a, armeabi-v7a, x86, x86_64", "arm64-v8a, armeabi-v7a"] + ([arch] if arch != "all" else [])
         soup = parse_html(self._resp_html)
         app_tag = soup.select_one("#detail-app-name")
         if not app_tag or not app_tag.get("data-code"):
             raise UptodownError("Uptodown: data-code not found")
-        data_code = str(app_tag["data-code"])
 
+        data_code = str(app_tag["data-code"])
         version_url_data = self._find_version_url(url, data_code, version)
         ver_url = f"{version_url_data['url']}/{version_url_data['extraURL']}/{version_url_data['versionID']}"
         is_bundle = version_url_data.get("kindFile") == "xapk"
-
         resp = self.net.get(ver_url)
-        soup2 = parse_html(resp)
-        btn_variants = soup2.select_one(".button.variants")
+        soup_ver = parse_html(resp)
+        btn_variants = soup_ver.select_one(".button.variants")
         data_version = btn_variants.get("data-version") if btn_variants else None
-
         if data_version:
             resp, is_bundle = self._pick_variant_file(url, data_code, str(data_version), apparch)
+            soup_ver = parse_html(resp)
 
-        dl_btn = parse_html(resp).select_one("#detail-download-button")
+        dl_btn = soup_ver.select_one("#detail-download-button")
         if not dl_btn or not dl_btn.get("data-url"):
             raise UptodownError("Uptodown: #detail-download-button not found")
 
@@ -66,15 +65,19 @@ class UptodownScraper(BaseScraper):
             except json.JSONDecodeError as exc:
                 raise UptodownError(f"Uptodown: invalid JSON on page {i}") from exc
 
-            if match := next((e for e in payload.get("data", []) if e.get("version") == version), None):
+            data = payload.get("data")
+            if not data:
+                break
+
+            if match := next((e for e in data if e.get("version") == version), None):
                 if not match.get("versionURL"):
                     raise UptodownError(f"Uptodown: no versionURL for version {version}")
                 return match["versionURL"] | {"kindFile": match.get("kindFile", "")}
 
-        raise UptodownError(f"Uptodown: version {version} not found in first 20 pages")
+        raise UptodownError(f"Uptodown: version {version} not found")
 
     def _pick_variant_file(self, url: str, data_code: str, data_version: str, apparch: list[str]) -> tuple[str, bool]:
-        base_url = "/".join(url.split("/")[:-1])
+        base_url = url.rsplit("/", 1)[0]
         files_html = json.loads(self.net.get(f"{base_url}/app/{data_code}/version/{data_version}/files")).get("content", "")
         content = parse_html(files_html).select_one(".content")
         if not content:

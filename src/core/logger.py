@@ -5,9 +5,6 @@ from typing import Never
 IS_GITHUB: bool = os.getenv("GITHUB_ACTIONS") == "true"
 
 
-class BuildAbortError(Exception):
-    pass
-
 def _log(color: str, symbol: str, msg: str, gh_level: str | None = None) -> None:
     if IS_GITHUB and gh_level:
         print(f"::{gh_level}::{msg}", file=sys.stderr)
@@ -25,4 +22,4 @@ def wpr(msg: str) -> None:
 
 def abort(msg: str) -> Never:
     epr(f"ABORT: {msg}")
-    raise BuildAbortError(msg)
+    sys.exit(1)

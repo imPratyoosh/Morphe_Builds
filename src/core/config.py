@@ -1,4 +1,5 @@
 import os
+import shlex
 import tomllib
 from dataclasses import dataclass
 from pathlib import Path
@@ -27,12 +28,10 @@ class AppEntry:
     arch: str
     dpi: str
     version: str
-    uptodown_dlurl: str | None
-    apkmirror_dlurl: str | None
-    archive_dlurl: str | None
-    patcher_args: str
-    included_patches: str
-    excluded_patches: str
+    dl_urls: dict[str, str]
+    patcher_args: list[str]
+    included_patches: list[str]
+    excluded_patches: list[str]
     exclusive_patches: bool
     patches_source: str
     cli_source: str
@@ -42,7 +41,7 @@ class AppEntry:
 
     @property
     def dl_from(self) -> str | None:
-        return next((src for src in SOURCES if getattr(self, f"{src}_dlurl") is not None), None)
+        return next(iter(self.dl_urls), None)
 
 def load_toml(path: Path) -> dict[str, object]:
     if path.suffix != ".toml":
@@ -69,24 +68,36 @@ def parse_app_entries(data: dict[str, object], main: Config) -> list[AppEntry]:
         if (arch := str(t.get("arch", "all"))) not in VALID_ARCHES:
             raise ValueError(f"Wrong arch '{arch}' for '{table_name}'")
 
+        dl_urls = {}
+        for src in SOURCES:
+            if url := _clean_dlurl(t.get(f"{src}-dlurl")):
+                dl_urls[src] = url
+
+        def get_str(key, default):
+            return str(t.get(key, default))
+
+        inc_raw = get_str("included-patches", "")
+        exc_raw = get_str("excluded-patches", "")
+        for name, raw in (("included-patches", inc_raw), ("excluded-patches", exc_raw)):
+            if raw and "'" not in raw:
+                raise ValueError(f"Patch names inside {name} for '{table_name}' must be quoted")
+
         entries.append(AppEntry(
             table=table_name,
-            app_name=str(t.get("app-name", table_name)),
-            brand=str(t.get("brand", main.brand)),
+            app_name=get_str("app-name", table_name),
+            brand=get_str("brand", main.brand),
             arch=arch,
-            dpi=str(t.get("dpi", "")),
-            version=str(t.get("version", "auto")),
-            uptodown_dlurl=_clean_dlurl(t.get("uptodown-dlurl")),
-            apkmirror_dlurl=_clean_dlurl(t.get("apkmirror-dlurl")),
-            archive_dlurl=_clean_dlurl(t.get("archive-dlurl")),
-            patcher_args=str(t.get("patcher-args", "")),
-            included_patches=str(t.get("included-patches", "")),
-            excluded_patches=str(t.get("excluded-patches", "")),
+            dpi=get_str("dpi", ""),
+            version=get_str("version", "auto"),
+            dl_urls=dl_urls,
+            patcher_args=shlex.split(get_str("patcher-args", "")),
+            included_patches=shlex.split(inc_raw),
+            excluded_patches=shlex.split(exc_raw),
             exclusive_patches=_parse_bool(t.get("exclusive-patches", False), "exclusive-patches"),
-            patches_source=str(t.get("patches-source", main.patches_source)),
-            cli_source=str(t.get("cli-source", main.cli_source)),
-            patches_version=str(t.get("patches-version", main.patches_version)),
-            cli_version=str(t.get("cli-version", main.cli_version)),
+            patches_source=get_str("patches-source", main.patches_source),
+            cli_source=get_str("cli-source", main.cli_source),
+            patches_version=get_str("patches-version", main.patches_version),
+            cli_version=get_str("cli-version", main.cli_version),
             enabled=_parse_bool(t.get("enabled", True), "enabled"),
         ))
     return entries

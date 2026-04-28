@@ -11,24 +11,20 @@ _RE_CHANGELOG_END = re.compile(r"^\[.*Changelog\]")
 
 def get_matrix(source: str) -> None:
     try:
-        data: dict[str, object] = load_toml(CONFIG_PATH)
-    except FileNotFoundError:
-        abort(f"Config file not found: '{CONFIG_PATH}'")
-    except ValueError as exc:
-        abort(str(exc))
+        data = load_toml(CONFIG_PATH)
+    except (FileNotFoundError, ValueError) as exc:
+        abort(f"Config error: {exc}")
 
     main_cfg = parse_config(data)
     source_lower = source.lower()
     include: list[dict[str, str]] = []
 
     for entry in parse_app_entries(data, main_cfg):
-        if not entry.enabled or entry.brand.lower() != source_lower:
-            continue
-
-        if entry.arch == "both":
-            include.extend(({"id": entry.table, "arch": "arm64-v8a"}, {"id": entry.table, "arch": "arm-v7a"}))
-        else:
-            include.append({"id": entry.table})
+        if entry.enabled and entry.brand.lower() == source_lower:
+            if entry.arch == "both":
+                include.extend([{"id": entry.table, "arch": "arm64-v8a"}, {"id": entry.table, "arch": "arm-v7a"}])
+            else:
+                include.append({"id": entry.table})
 
     if not include:
         abort(f"No apps found for patch source '{source}'")
@@ -36,7 +32,8 @@ def get_matrix(source: str) -> None:
     print(json.dumps({"include": include}, ensure_ascii=False))
 
 def combine_logs(logs_dir: Path | str) -> None:
-    if not (logs := sorted(Path(logs_dir).rglob("build.md"))):
+    logs = sorted(Path(logs_dir).rglob("build.md"))
+    if not logs:
         return
 
     green_lines: list[str] = []
@@ -45,6 +42,7 @@ def combine_logs(logs_dir: Path | str) -> None:
 
     for log in logs:
         capturing = False
+        current: list[str] = []
 
         with log.open("r", encoding="utf-8") as fh:
             for raw in fh:
@@ -55,25 +53,20 @@ def combine_logs(logs_dir: Path | str) -> None:
                     green_lines.append(line)
                 elif not microg_line and line.startswith("-") and "MicroG" in line:
                     microg_line = line
-
                 if _RE_CLI_START.match(line):
                     capturing = True
-                elif _RE_CHANGELOG_END.match(line):
-                    collected.append(line)
-                    collected.append("")
-                    capturing = False
-                    continue
-
+                    current = []
                 if capturing:
-                    collected.append(line)
-
+                    current.append(line)
+                    if _RE_CHANGELOG_END.match(line):
+                        collected.append("\n".join(current))
+                        capturing = False
         if capturing:
             epr(f"Warning: unclosed CLI section in '{log}' - changelog end marker not found")
 
     if green_lines:
-        print("\n".join(green_lines))
-        print()
+        print("\n".join(green_lines), end="\n\n")
     if microg_line:
         print(microg_line, end="\n\n")
     if unique := list(dict.fromkeys(collected)):
-        print("\n".join(unique))
+        print("\n\n".join(unique))

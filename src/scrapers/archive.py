@@ -2,7 +2,7 @@ import re
 from pathlib import Path
 
 from src.core.network import NetworkManager
-from src.scrapers.base import BaseScraper, DownloadResult, parse_html
+from src.scrapers.base import AppMetadata, BaseScraper, DownloadResult, parse_html
 
 _ARCH_SUFFIX = re.compile(r"-(?:all|arm64-v8a|arm-v7a)\.(?:apk|apkm|xapk)$")
 
@@ -14,38 +14,35 @@ class ArchiveScraper(BaseScraper):
         super().__init__(net)
         self._file_list: list[str] = []
         self._pkg_name: str = ""
+        self._base_url: str = ""
 
-    def fetch_metadata(self, url: str) -> None:
-        html = self.net.get(url)
-        soup = parse_html(html)
+    def fetch_metadata(self, url: str) -> AppMetadata:
+        self._base_url = url.rstrip("/")
+        self._pkg_name = self._base_url.split("/")[-1]
+        soup = parse_html(self.net.get(url))
         self._file_list = [
             a["href"] for a in soup.find_all("a", href=True)
-            if not str(a["href"]).startswith(("?", "/", "http"))
+            if not a["href"].startswith(("?", "/", "http"))
         ]
-        self._pkg_name = url.rstrip("/").split("/")[-1]
 
-    def get_pkg_name(self) -> str:
-        return self._pkg_name
-
-    def get_versions(self, allow_beta: bool = False) -> list[str]:
         versions: list[str] = []
+        prefix = f"{self._pkg_name}-"
         for fname in self._file_list:
-            parts = fname.split("-", 1)
-            if len(parts) < 2:
+            if not fname.startswith(prefix):
                 continue
-            if ver_part := _ARCH_SUFFIX.sub("", parts[1]):
+            if ver_part := _ARCH_SUFFIX.sub("", fname[len(prefix):]):
                 versions.append(ver_part)
-        return list(dict.fromkeys(versions))
+        return AppMetadata(pkg_name=self._pkg_name, versions=list(dict.fromkeys(versions)))
 
     def download(self, url: str, version: str, dest: Path, arch: str, dpi: str) -> DownloadResult:
-        version = version.replace(" ", "")
+        version = version.replace(" ", "").lstrip("v")
         arch = arch.replace(" ", "")
-        pattern = re.compile(rf"(?<![.\d]){re.escape(version.lstrip('v'))}-{re.escape(arch)}")
-        match = next((f for f in self._file_list if pattern.search(f)), None)
+        expected_prefix = f"{self._pkg_name}-{version}-{arch}"
+        match = next((f for f in self._file_list if f.startswith(expected_prefix)), None)
         if not match:
             raise ArchiveError(f"Archive: no file matching version='{version}' arch='{arch}' in {url}")
 
         is_bundle = match.endswith((".apkm", ".xapk"))
         out_path = dest.with_name(f"{dest.name}{'.apkm' if is_bundle else ''}")
-        self.net.download(f"{url.rstrip('/')}/{match}", out_path)
+        self.net.download(f"{self._base_url}/{match}", out_path)
         return DownloadResult(path=out_path, is_bundle=is_bundle)

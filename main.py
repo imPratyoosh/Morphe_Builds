@@ -7,7 +7,7 @@ from pathlib import Path
 from src.core.builder import run_build
 from src.core.config import BUILD_DIR, CONFIG_PATH, TEMP_DIR, VALID_ARCHES, load_toml, parse_config
 from src.core.gh_utils import combine_logs, get_matrix
-from src.core.logger import BuildAbortError, abort, epr, pr
+from src.core.logger import abort, epr, pr
 from src.core.network import NetworkError, NetworkManager
 from src.core.patcher import PatcherError
 from src.core.prebuilts import PrebuiltsError
@@ -18,17 +18,16 @@ from src.scrapers.uptodown import UptodownError
 _KNOWN_ERRORS = (NetworkError, PrebuiltsError, PatcherError, APKMirrorError, ArchiveError, UptodownError)
 
 def _load_dotenv(path: Path = Path(".env")) -> None:
-    if not path.exists():
+    if not path.is_file():
         return
-    for raw in path.read_text(encoding="utf-8").splitlines():
-        line = raw.strip()
-        if not line or line.startswith("#") or "=" not in line:
-            continue
-        key, _, value = line.partition("=")
-        key = key.strip()
-        value = value.strip().strip('"').strip("'")
-        if key and key not in os.environ:
-            os.environ[key] = value
+
+    for line in path.read_text(encoding="utf-8").splitlines():
+        line = line.strip()
+        if line and not line.startswith("#") and "=" in line:
+            key, _, value = line.partition("=")
+            key = key.strip()
+            if key and key not in os.environ:
+                os.environ[key] = value.strip().strip('"\'')
 
 def _build(target_app: str | None = None, arch_override: str | None = None) -> int:
     try:
@@ -50,7 +49,6 @@ def _build(target_app: str | None = None, arch_override: str | None = None) -> i
 
     with NetworkManager() as net:
         success = run_build(data, main_cfg, net, target_app=target_app, arch_override=arch_override)
-
     return 0 if success else 1
 
 def _clear() -> int:
@@ -73,16 +71,14 @@ def _sigint_handler(sig: int, frame: object) -> None:
 
 def _require_ci(cmd: str) -> None:
     if os.getenv("GITHUB_ACTIONS") != "true":
-        epr(f"'{cmd}' is only available in GitHub Actions")
-        sys.exit(1)
+        abort(f"'{cmd}' is only available in GitHub Actions")
 
 def main() -> None:
     signal.signal(signal.SIGINT, _sigint_handler)
-
     _load_dotenv()
-    argv = sys.argv[1:]
+    
     try:
-        match argv:
+        match sys.argv[1:]:
             case []:
                 sys.exit(_build())
             case ["get-matrix", *source]:
@@ -96,17 +92,12 @@ def main() -> None:
             case [target, *rest] if not rest or rest[0] in VALID_ARCHES:
                 sys.exit(_build(target_app=target, arch_override=rest[0] if rest else None))
             case [_, arch]:
-                epr(f"Unknown arch '{arch}'. Valid: {', '.join(sorted(VALID_ARCHES))}")
-                sys.exit(1)
+                abort(f"Unknown arch '{arch}'. Valid: {', '.join(sorted(VALID_ARCHES))}")
             case _:
-                epr(f"Unknown command: {' '.join(argv)}")
-                epr("Usage: main.py [target] [arch] | clear")
-                sys.exit(1)
-    except BuildAbortError:
-        sys.exit(1)
+                epr(f"Unknown command: {' '.join(sys.argv[1:])}")
+                abort("Usage: main.py [target] [arch] | clear")
     except _KNOWN_ERRORS as exc:
-        epr(str(exc))
-        sys.exit(1)
+        abort(str(exc))
 
 if __name__ == "__main__":
     main()

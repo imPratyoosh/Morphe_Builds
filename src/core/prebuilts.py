@@ -1,6 +1,7 @@
 import json
 import re
 from dataclasses import dataclass
+from functools import cache
 from pathlib import Path
 
 from src.core.config import TEMP_DIR
@@ -18,26 +19,18 @@ class Prebuilts:
     cli_jar: Path
     patches_mpp: Path
 
-def _base_ver(ver: str) -> str:
-    return ver.lstrip("v").split("-")[0]
-
-def _semver_validate(ver: str) -> bool:
-    stripped = _base_ver(ver)
-    return bool(stripped) and bool(re.fullmatch(r"[\d.]+", stripped))
-
 def _ver_key(ver: str) -> tuple[int, ...]:
     try:
-        return tuple(int(x) for x in _base_ver(ver).split("."))
+        return tuple(int(x) for x in re.findall(r'\d+', ver))
     except ValueError:
         return (0,)
 
 def get_highest_ver(versions: list[str]) -> str:
     if not (clean := [v.strip() for v in versions if v.strip()]):
         raise ValueError("Empty version list")
-    if all(_semver_validate(v) for v in clean):
-        return max(clean, key=_ver_key)
-    return clean[0]
+    return max(clean, key=_ver_key)
 
+@cache
 def fetch_prebuilts(cli_src: str, cli_ver: str, patches_src: str, patches_ver: str, net: NetworkManager) -> Prebuilts:
     patches_org = patches_src.split("/")[0]
     cl_dir = TEMP_DIR / patches_org.lower()
@@ -65,7 +58,6 @@ def _fetch_single_asset(src: str, tag: str, ver: str, fprefix: str, ext: str, cl
 
     api_url = f"{base_url}/latest" if ver == "latest" else f"{base_url}/tags/{ver}"
     name_ver = "*" if ver == "latest" else ver
-
     file = _find_cached(dir_path, fprefix, name_ver, ext, exclude_dev=(ver == "latest"))
     grab_cl = (tag == "Patches") and (file is None)
     tag_name = ""
@@ -78,7 +70,8 @@ def _fetch_single_asset(src: str, tag: str, ver: str, fprefix: str, ext: str, cl
         matches = [a for a in assets if a.get("name", "").endswith(f".{ext}")]
 
         if len(matches) > 1:
-            if len(non_dev := [a for a in matches if "-dev" not in a.get("name", "")]) == 1:
+            non_dev = [a for a in matches if "-dev" not in a.get("name", "")]
+            if non_dev:
                 matches = non_dev
         if not matches:
             raise PrebuiltsError(f"No asset (.{ext}) found for {src} @ {ver}")
@@ -96,10 +89,8 @@ def _fetch_single_asset(src: str, tag: str, ver: str, fprefix: str, ext: str, cl
         changelog += f"[🔗 » Changelog](https://github.com/{src}/releases/tag/{tag_name})\n\n"
 
     if changelog:
-        cl_file = cl_dir / "changelog.md"
-        old = cl_file.read_text(encoding="utf-8") if cl_file.exists() else ""
-        cl_file.write_text(old + changelog, encoding="utf-8")
-
+        with (cl_dir / "changelog.md").open("a", encoding="utf-8") as f:
+            f.write(changelog)
     return file
 
 def _find_cached(dir_path: Path, fprefix: str, name_ver: str, ext: str, exclude_dev: bool) -> Path | None:

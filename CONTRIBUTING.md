@@ -62,7 +62,7 @@ apkmirror-dlurl = "https://www.apkmirror.com/apk/inc/app"
 | `cli-source` | GitHub repo for CLI (`owner/repo`) | `MorpheApp/morphe-cli` |
 | `app-name` | Display name used in output filename | `table name` |
 | `arch` | Target architecture (`all`, `both`, `arm64-v8a`, `arm-v7a`, `x86_64`, `x86`) | `all` |
-| `version` | Target version (`auto`, `latest`, `beta`, or a specific version string) | `auto` |
+| `version` | Target version (`auto`, `latest`, or a specific version string) | `auto` |
 | `apkmirror-dlurl` | APKMirror page URL | `-` |
 | `uptodown-dlurl` | Uptodown page URL | `-` |
 | `archive-dlurl` | Archive.org page URL | `-` |

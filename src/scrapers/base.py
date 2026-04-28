@@ -10,6 +10,11 @@ def parse_html(html: str) -> BeautifulSoup:
     return BeautifulSoup(html, "html.parser")
 
 @dataclass(slots=True, frozen=True)
+class AppMetadata:
+    pkg_name: str
+    versions: list[str]
+
+@dataclass(slots=True, frozen=True)
 class DownloadResult:
     path: Path
     is_bundle: bool = False
@@ -19,15 +24,7 @@ class BaseScraper(ABC):
         self.net = net
 
     @abstractmethod
-    def fetch_metadata(self, url: str) -> None:
-        pass
-
-    @abstractmethod
-    def get_pkg_name(self) -> str:
-        pass
-
-    @abstractmethod
-    def get_versions(self, allow_beta: bool = False) -> list[str]:
+    def fetch_metadata(self, url: str) -> AppMetadata:
         pass
 
     @abstractmethod
