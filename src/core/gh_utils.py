@@ -2,7 +2,7 @@ import json
 import re
 from pathlib import Path
 
-from src.core.config import load_toml, parse_config, parse_app_entries, CONFIG_PATH
+from src.core.config import CONFIG_PATH, load_toml, parse_app_entries, parse_config
 from src.core.logger import abort, epr
 
 _RE_CLI_START = re.compile(r"^>.*CLI:")

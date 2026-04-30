@@ -1,7 +1,8 @@
 import os
 import threading
 from pathlib import Path
-from typing import Self
+from typing import ClassVar, Self
+
 from curl_cffi import requests
 from curl_cffi.requests import exceptions as req_exc
 
@@ -12,7 +13,7 @@ class NetworkError(Exception):
     pass
 
 class NetworkManager:
-    _download_locks: dict[Path, threading.Lock] = {}
+    _download_locks: ClassVar[dict[Path, threading.Lock]] = {}
     _locks_mutex: threading.Lock = threading.Lock()
 
     def __init__(self) -> None:

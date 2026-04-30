@@ -73,31 +73,28 @@ def parse_app_entries(data: dict[str, object], main: Config) -> list[AppEntry]:
             if url := _clean_dlurl(t.get(f"{src}-dlurl")):
                 dl_urls[src] = url
 
-        def get_str(key, default):
-            return str(t.get(key, default))
-
-        inc_raw = get_str("included-patches", "")
-        exc_raw = get_str("excluded-patches", "")
+        inc_raw = str(t.get("included-patches", ""))
+        exc_raw = str(t.get("excluded-patches", ""))
         for name, raw in (("included-patches", inc_raw), ("excluded-patches", exc_raw)):
             if raw and "'" not in raw:
                 raise ValueError(f"Patch names inside {name} for '{table_name}' must be quoted")
 
         entries.append(AppEntry(
             table=table_name,
-            app_name=get_str("app-name", table_name),
-            brand=get_str("brand", main.brand),
+            app_name=str(t.get("app-name", table_name)),
+            brand=str(t.get("brand", main.brand)),
             arch=arch,
-            dpi=get_str("dpi", ""),
-            version=get_str("version", "auto"),
+            dpi=str(t.get("dpi", "")),
+            version=str(t.get("version", "auto")),
             dl_urls=dl_urls,
-            patcher_args=shlex.split(get_str("patcher-args", "")),
+            patcher_args=shlex.split(str(t.get("patcher-args", ""))),
             included_patches=shlex.split(inc_raw),
             excluded_patches=shlex.split(exc_raw),
             exclusive_patches=_parse_bool(t.get("exclusive-patches", False), "exclusive-patches"),
-            patches_source=get_str("patches-source", main.patches_source),
-            cli_source=get_str("cli-source", main.cli_source),
-            patches_version=get_str("patches-version", main.patches_version),
-            cli_version=get_str("cli-version", main.cli_version),
+            patches_source=str(t.get("patches-source", main.patches_source)),
+            cli_source=str(t.get("cli-source", main.cli_source)),
+            patches_version=str(t.get("patches-version", main.patches_version)),
+            cli_version=str(t.get("cli-version", main.cli_version)),
             enabled=_parse_bool(t.get("enabled", True), "enabled"),
         ))
     return entries

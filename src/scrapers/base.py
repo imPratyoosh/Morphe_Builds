@@ -1,7 +1,8 @@
 from abc import ABC, abstractmethod
-from bs4 import BeautifulSoup
 from dataclasses import dataclass
 from pathlib import Path
+
+from bs4 import BeautifulSoup
 
 from src.core.network import NetworkManager
 

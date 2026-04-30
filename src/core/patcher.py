@@ -1,8 +1,8 @@
 import os
 import re
+import shutil
 import subprocess
 import tempfile
-import shutil
 import zipfile
 from pathlib import Path
 
@@ -79,10 +79,11 @@ class PatcherCLI:
             if m := re.search(pattern, list_patches_output, re.I | re.M):
                 return m.group(1).strip()
             return ""
+
         return find(r"^Name:\s*(.*(?:gmscore|microg).*)$"), find(r"^Name:\s*(.*disable play store updates.*)$")
 
     def build_patch_args(self, included_patches: list[str], excluded_patches: list[str], exclusive: bool, extra_args: list[str], arch: str, auto_patches: list[str], force: bool = False) -> list[str]:
-        active_auto = set(p for p in auto_patches if p)
+        active_auto = {p for p in auto_patches if p}
         p_args: list[str] = []
         if force:
             p_args.append("-f")
@@ -122,7 +123,7 @@ class PatcherCLI:
             _run_java(*base_cmd, *ks_args, *patch_args, capture=False)
         except PatcherError:
             output_apk.unlink(missing_ok=True)
-            raise PatcherError(f"Patching '{stock_apk.name}' failed")
+            raise PatcherError(f"Patching '{stock_apk.name}' failed") from None
 
         if not output_apk.exists():
             raise PatcherError(f"Patching '{stock_apk.name}' failed - output not created")

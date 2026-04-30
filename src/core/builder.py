@@ -23,6 +23,7 @@ def _make_scraper(source: str, net: NetworkManager) -> BaseScraper:
     from src.scrapers.apkmirror import APKMirrorScraper
     from src.scrapers.archive import ArchiveScraper
     from src.scrapers.uptodown import UptodownScraper
+
     match source:
         case "apkmirror":
             return APKMirrorScraper(net)
@@ -203,6 +204,7 @@ def run_build(data: dict[str, object], config: Config, net: NetworkManager, targ
                 for arch in arches:
                     label = entry.table if entry.arch == "all" else f"{entry.table} ({arch})"
                     futures.append(pool.submit(_build_single, entry, arch, label, net, patcher))
+
     finally:
         if ks_path:
             ks_path.unlink(missing_ok=True)
