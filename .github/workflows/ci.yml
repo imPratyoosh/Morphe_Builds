@@ -8,7 +8,7 @@ on:
         description: 'Build all apps (skip update check)'
         required: true
         type: boolean
-        default: true
+        default: false
 
 permissions:
   contents: write
