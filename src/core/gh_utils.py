@@ -71,9 +71,10 @@ def check_builds_needed(force_all: bool = False) -> None:
                 if scheme == "gitlab":
                     project = clean_src.replace("/", "%2F")
                     upstream_rel = json.loads(net.get(f"https://gitlab.com/api/v4/projects/{project}/releases/permalink/latest"))
+                    upstream_date = upstream_rel.get("released_at", "") or ""
                 else:
                     upstream_rel = json.loads(net.get(f"https://api.github.com/repos/{clean_src}/releases/latest", headers=net._gh_headers))
-                upstream_date = upstream_rel.get("published_at", "") or ""
+                    upstream_date = upstream_rel.get("published_at", "") or ""
             except ResourceNotFoundError:
                 epr(f"No upstream release found for '{patches_source}', skipping brand '{brand}'")
                 continue
