@@ -210,7 +210,7 @@ changelog-keywords = ["Niagara Launcher"]
 version = "latest"
 
 [Niagara-Launcher.patches]
-"github:hoo-dles/morphe-patches" = { version = "dev", ["Enable niagara pro", "Hide app icon"] }
+"github:hoo-dles/morphe-patches" = { version = "dev", include = ["Enable niagara pro", "Hide app icon"] }
 "github:MorpheApp/morphe-patches" = ["Disable play store updates"]
 
 [Nova-Launcher]
