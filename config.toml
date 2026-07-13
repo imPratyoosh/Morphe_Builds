@@ -132,7 +132,7 @@ apkmirror-dlurl = "https://www.apkmirror.com/apk/spocky/projectivy-launcher-andr
 # (Outdated) uptodown-dlurl = "https://projectivy-launcher.en.uptodown.com/android"
 changelog-keywords = ["Projectivy Launcher"]
 version =  "4.70"
-arch = "both"
+arch = "all"
 
 [Projectivy-Launcher.patches]
 "github:arandomhooman/hoomans-morphe-patches" = { version = "dev", include = ["Unlock Premium"] }
@@ -146,7 +146,7 @@ apkmirror-dlurl = "https://www.apkmirror.com/apk/cute-little-apps/at4k-launcher-
 # uptodown-dlurl = ""
 changelog-keywords = ["AT4K Launcher"]
 version = "0.99"
-arch = "armeabi-v7a"
+arch = "arm-v7a"
 
 [AT4K-Launcher.patches]
 "github:arandomhooman/hoomans-morphe-patches" = { version = "dev", include = ["Unlock Premium"] }
