@@ -146,7 +146,7 @@ apkmirror-dlurl = "https://www.apkmirror.com/apk/cute-little-apps/at4k-launcher-
 # uptodown-dlurl = ""
 changelog-keywords = ["AT4K Launcher"]
 version = "0.99"
-arch = "arm-v7a"
+arch = "all"
 
 [AT4K-Launcher.patches]
 "github:arandomhooman/hoomans-morphe-patches" = { version = "dev", include = ["Unlock Premium"] }
