@@ -36,5 +36,5 @@ jobs:
       - name: Commit Updated README
         uses: stefanzweifel/git-auto-commit-action@v5
         with:
-          commit_message: "docs: dynamically update README from latest build logs"
-          file_pattern: 'README.md'
+          commit_message: "docs: dynamically update README and memory from latest build logs"
+          file_pattern: 'README.md apps_state.json' 
