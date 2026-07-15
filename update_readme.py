@@ -1,22 +1,35 @@
 import os
 import re
 import sys
+import json
 
 LOG_FILE = 'build.log'
 TEMPLATE_FILE = 'README.template.md'
 OUTPUT_FILE = 'README.md'
-
-apps_data = {}
-current_app = None
-current_bundles = []
+STATE_FILE = 'apps_state.json'  # Our memory bank
 
 def clean_terminal_formatting(text):
+    """Removes ANSI color codes and timestamps from the log lines."""
     ansi_escape = re.compile(r'\x1B(?:[@-Z\\-_]|\[[0-?]*[ -/]*[@-~])')
     text = ansi_escape.sub('', text)
     text = re.sub(r'^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d+Z\s+', '', text)
     return text.strip()
 
-# 1. Parse the log file line by line
+# 1. Load previous memory if it exists
+if os.path.exists(STATE_FILE):
+    try:
+        with open(STATE_FILE, 'r', encoding='utf-8') as f:
+            apps_data = json.load(f)
+    except json.JSONDecodeError:
+        apps_data = {}
+else:
+    apps_data = {}
+
+current_app = None
+current_bundles = []
+apps_updated_this_run = 0
+
+# 2. Parse the log file line by line
 try:
     with open(LOG_FILE, 'r', encoding='utf-8') as f:
         for line in f:
@@ -27,24 +40,31 @@ try:
                 current_bundles = []
                 current_app = None
 
-            # Detect Patch Bundles (e.g., [+] Getting 'patches-1.34.0.mpp' from ...)
+            # Detect Patch Bundles
             elif "Getting '" in clean_line and "' from '" in clean_line:
                 match = re.search(r"Getting '(.*?)' from '(.*?)'", clean_line)
                 if match:
                     filename = match.group(1)
                     url = match.group(2)
                     
-                    # Ignore the cli jar, we only want the patch bundles
                     if "cli" not in filename.lower() and "jar" not in filename.lower():
-                        # Extract Owner/Repo from URL
-                        repo_match = re.search(r'/repos/([^/]+/[^/]+)', url)
-                        repo = repo_match.group(1) if repo_match else "Unknown/Repo"
-                        
+                        # Smarter URL parsing for both GitHub and GitLab
+                        repo = "Unknown/Repo"
+                        if '/repos/' in url:  # GitHub API
+                            m = re.search(r'/repos/([^/]+/[^/]+)', url)
+                            if m: repo = m.group(1)
+                        elif '/projects/' in url:  # GitLab API
+                            m = re.search(r'/projects/([^/]+)', url)
+                            # GitLab URL-encodes the slash as %2F, so we decode it back
+                            if m: repo = m.group(1).replace('%2F', '/')
+                        else:  # Standard Web URLs fallback
+                            m = re.search(r'(?:github\.com|gitlab\.com)/([^/]+/[^/]+)', url)
+                            if m: repo = m.group(1)
+                            
                         # Extract version (e.g. patches-1.34.0.mpp -> 1.34.0)
                         v_match = re.search(r'([\d\.]+)', filename)
                         version = v_match.group(1) if v_match else filename.replace('.mpp', '').replace('patches-', '')
                         
-                        # Avoid duplicates
                         if not any(b['repo'] == repo for b in current_bundles):
                             current_bundles.append({'repo': repo, 'version': version})
 
@@ -55,18 +75,16 @@ try:
                     current_app = match.group(1)
                     if current_app not in apps_data:
                         apps_data[current_app] = {'version': "Unknown", 'bundles': current_bundles.copy(), 'applied': [], 'excluded': []}
+                        apps_updated_this_run += 1
                         
             # Detect App Name & Exact App Version
             elif "[+] Choosing version '" in clean_line:
                 match = re.search(r"Choosing version '(.*?)' for '(.*?)'", clean_line)
                 if match:
                     current_app = match.group(2)
-                    if current_app not in apps_data:
-                        apps_data[current_app] = {'version': match.group(1), 'bundles': current_bundles.copy(), 'applied': [], 'excluded': []}
-                    else:
-                        apps_data[current_app]['version'] = match.group(1)
-                        if not apps_data[current_app]['bundles']:
-                            apps_data[current_app]['bundles'] = current_bundles.copy()
+                    # Overwrite or initialize this app's data for the fresh build
+                    apps_data[current_app] = {'version': match.group(1), 'bundles': current_bundles.copy(), 'applied': [], 'excluded': []}
+                    apps_updated_this_run += 1
                             
             # Detect Applied Patches
             elif current_app and "INFO: Applied: " in clean_line:
@@ -82,17 +100,23 @@ try:
                         apps_data[current_app]['excluded'].append(patch)
 
 except FileNotFoundError:
-    print(f"Error: {LOG_FILE} not found.")
-    sys.exit(1)
+    print(f"Warning: {LOG_FILE} not found. Skipping log parsing.")
 
-# 2. Format the parsed data into Markdown
+# 3. Save the updated memory bank back to disk
+with open(STATE_FILE, 'w', encoding='utf-8') as f:
+    json.dump(apps_data, f, indent=4)
+
+print(f"Memory updated. {apps_updated_this_run} apps updated from current log.")
+
+# 4. Format the parsed data into Markdown
 apps_md = ""
-for index, (app_name, data) in enumerate(apps_data.items(), start=1):
+# Sort alphabetically to keep the README consistent regardless of build order
+for index, app_name in enumerate(sorted(apps_data.keys()), start=1):
+    data = apps_data[app_name]
     applied = data['applied']
     excluded = data['excluded']
     bundles = data['bundles']
     
-    # Extract lists of repos and versions
     repos_list = [b['repo'] for b in bundles]
     versions_list = [b['version'] for b in bundles]
     
@@ -123,7 +147,7 @@ for index, (app_name, data) in enumerate(apps_data.items(), start=1):
             
     apps_md += "</details>\n\n"
 
-# 3. Inject into README template
+# 5. Inject into README template
 try:
     with open(TEMPLATE_FILE, 'r', encoding='utf-8') as f:
         template = f.read()
@@ -133,8 +157,9 @@ except FileNotFoundError:
 
 final_readme = template.replace('{{APPS_LIST}}', apps_md.strip())
 
-# 4. Save the final README
+# 6. Save the final README
 with open(OUTPUT_FILE, 'w', encoding='utf-8') as f:
     f.write(final_readme)
 
-print("README.md successfully updated with clean patch lists!")
+print("README.md successfully generated from memory!")
+
