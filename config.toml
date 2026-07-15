@@ -71,7 +71,7 @@ brand = "Twitter"
 apkmirror-dlurl = "https://www.apkmirror.com/apk/x-corp/twitter"
 uptodown-dlurl = "https://twitter.en.uptodown.com/android"
 changelog-keywords = ["Twitter"]
-version = "latest"
+version = "12.7.1-release.0"
 arch = "arm64-v8a"
 
 [Twitter.patches]
