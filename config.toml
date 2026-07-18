@@ -64,6 +64,7 @@ version = "latest"
 [Reddit.patches]
 "github:MorpheApp/morphe-patches" = []
 "github:jkennethcarino/adobo" = { version = "dev", include = ["Hide awards", "Disable home feed auto-refresh"], exclude = ["Hide post view counts", "Disable screenshot banner", "Open external links directly", "Remove ads and telemetry", "Sanitize share links"] }
+"github:ch3thanhs/stylus" = []
 
 [Twitter]
 enabled = true
