@@ -1,35 +1,5 @@
 strict-sigcheck = false
 
-[YouTube-Stable]
-brand = "YouTube-Stable"
-enabled = false
-apkmirror-dlurl = "https://www.apkmirror.com/apk/google-inc/youtube"
-uptodown-dlurl = "https://youtube.en.uptodown.com/android"
-arch = "arm64-v8a"
-
-[YouTube-Stable.patches]
-"github:MorpheApp/morphe-patches" = { version = "dev", exclude = ["Custom branding", "Enable debugging", "Disable play store updates"] }
-
-
-[YT-Music-Stable]
-brand = "YT-Music-Stable"
-enabled = false
-apkmirror-dlurl = "https://www.apkmirror.com/apk/google-inc/youtube-music"
-uptodown-dlurl = "https://youtube-music.en.uptodown.com/android"
-arch = "arm64-v8a"
-
-[YT-Music-Stable.patches]
-"github:MorpheApp/morphe-patches" = { version = "dev", exclude = ["Custom branding", "Enable debugging", "Disable play store updates"] }
-
-[Reddit-Stable]
-enabled = false
-brand = "Reddit-Stable"
-apkmirror-dlurl = "https://www.apkmirror.com/apk/redditinc/reddit"
-uptodown-dlurl = "https://reddit-official-app.en.uptodown.com/android"
-
-[Reddit-Stable.patches]
-"github:MorpheApp/morphe-patches" = []
-
 [YouTube]
 enabled = true
 brand = "YouTube"
@@ -52,7 +22,7 @@ arch = "arm64-v8a"
 version = "latest"
 
 [YT-Music.patches]
-"github:MorpheApp/morphe-patches" = { version = "latest", exclude = ["Custom branding", "Enable debugging", "Disable play store updates"] }
+"github:MorpheApp/morphe-patches" = { version = "dev", exclude = ["Custom branding", "Enable debugging", "Disable play store updates"] }
 
 [Reddit]
 enabled = true
@@ -60,11 +30,11 @@ brand = "Reddit"
 apkmirror-dlurl = "https://www.apkmirror.com/apk/redditinc/reddit"
 uptodown-dlurl = "https://reddit-official-app.en.uptodown.com/android"
 version = "2026.28.0"
+patcher-args = "-OindentLineColors1='#0066FF' -OindentLineColors2='#FF2E88' -OindentLineColors3='#9B5CFF' -OindentLineColors4='#2DE2E6' -OindentLineColors5='#FF5FA2' -OindentLineColors6='#FF8A3D' -OindentLineColors7='#FFD166' -OindentLineColors8='#3CFF7F'"
 
 [Reddit.patches]
 "github:MorpheApp/morphe-patches" = []
 "github:jkennethcarino/adobo" = { version = "dev", include = ["Hide awards", "Disable home feed auto-refresh"], exclude = ["Hide post view counts", "Disable screenshot banner", "Open external links directly", "Remove ads and telemetry", "Sanitize share links"] }
-"github:ch3thanhs/stylus" = []
 
 [Twitter]
 enabled = true
@@ -72,7 +42,7 @@ brand = "Twitter"
 apkmirror-dlurl = "https://www.apkmirror.com/apk/x-corp/twitter"
 uptodown-dlurl = "https://twitter.en.uptodown.com/android"
 changelog-keywords = ["Twitter"]
-version = "12.7.1-release.0"
+version = "auto"
 arch = "arm64-v8a"
 
 [Twitter.patches]
@@ -102,7 +72,7 @@ changelog-keywords = ["Niagara Launcher"]
 version = "latest"
 
 [Niagara-Launcher.patches]
-"github:hoo-dles/morphe-patches" = { version = "dev", include = ["Enable niagara pro", "Hide app icon"] }
+"github:hoo-dles/morphe-patches" = { version = "dev", include = ["Hide app icon"] }
 "github:MorpheApp/morphe-patches" = []
 
 [Pinterest]
