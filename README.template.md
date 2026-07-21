@@ -14,7 +14,7 @@ Click on an app below to see detailed info.
 
 ## 📥 Installation Guide
 
-1. **Download the APK:** Go to my [Releases](https://github.com/imPratyoosh/Morphe_Builds/releases) page and download the `.apk` files you want.
+1. **Download the APK:** Go to my [Releases](https://github.com/imPratyoosh/Advanced-Morphe-Builder/releases) page and download the `.apk` files you want.
 2. **Install [MicroG](https://github.com/MorpheApp/MicroG-RE/releases/latest):** If you are installing patched YouTube & YouTube Music, MicroG is required.
 4. **Install the App:** Open the downloaded `.apk` file and install it. *(Note: You may need to allow "Install from unknown sources" in your Android settings).*
 5. **Enjoy:** Open the app, log in (if required), and configure your Morphe settings inside the app.
